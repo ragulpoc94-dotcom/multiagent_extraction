@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design tokens.
+   Base: cool slate paper + deep navy ink (banking, not consumer).
+   Each competing model owns one identity hue used everywhere: M1 indigo, M2 teal, M3 amber. */
+@layer base {
+  :root {
+    --background: 216 33% 97%;
+    --foreground: 222 51% 16%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 51% 16%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 51% 16%;
+    --primary: 222 51% 16%;
+    --primary-foreground: 216 33% 97%;
+    --secondary: 216 28% 93%;
+    --secondary-foreground: 222 51% 16%;
+    --muted: 216 28% 94%;
+    --muted-foreground: 218 13% 41%;
+    --accent: 214 40% 92%;
+    --accent-foreground: 222 51% 16%;
+    --border: 216 24% 88%;
+    --input: 216 24% 86%;
+    --ring: 196 79% 30%;
+    --sidebar: 222 51% 14%;
+    --sidebar-foreground: 216 33% 94%;
+    --sidebar-muted: 218 22% 66%;
+    --success: 152 65% 33%;
+    --warning: 36 85% 42%;
+    --danger: 3 53% 49%;
+    --m1: 234 61% 58%;
+    --m2: 173 82% 30%;
+    --m3: 35 83% 42%;
+    --radius: 0.625rem;
+  }
+  .dark {
+    --background: 223 42% 9%;
+    --foreground: 218 35% 92%;
+    --card: 222 34% 13%;
+    --card-foreground: 218 35% 92%;
+    --popover: 222 34% 13%;
+    --popover-foreground: 218 35% 92%;
+    --primary: 218 35% 92%;
+    --primary-foreground: 223 42% 9%;
+    --secondary: 222 27% 18%;
+    --secondary-foreground: 218 35% 92%;
+    --muted: 222 27% 17%;
+    --muted-foreground: 218 16% 64%;
+    --accent: 222 27% 20%;
+    --accent-foreground: 218 35% 92%;
+    --border: 222 24% 21%;
+    --input: 222 24% 24%;
+    --ring: 190 60% 55%;
+    --sidebar: 224 44% 7%;
+    --sidebar-foreground: 218 35% 92%;
+    --sidebar-muted: 218 16% 60%;
+    --success: 152 50% 48%;
+    --warning: 38 85% 56%;
+    --danger: 3 70% 62%;
+    --m1: 234 80% 72%;
+    --m2: 172 60% 48%;
+    --m3: 36 85% 58%;
+  }
+  * { @apply border-border; }
+  html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  body { @apply bg-background text-foreground font-sans; font-feature-settings: "ss02"; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  :focus-visible { @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+}
+
+@layer components {
+  /* Diagonal hatch marks the self-prompt diagonal of the arena (model runs its own prompt). */
+  .self-hatch {
+    background-image: repeating-linear-gradient(135deg, hsl(var(--foreground) / 0.035) 0 6px, transparent 6px 12px);
+  }
+  .scrollbar-thin { scrollbar-width: thin; }
+}
