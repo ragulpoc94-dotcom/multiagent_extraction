@@ -186,6 +186,12 @@ def test_exports(repo, settings, requirements_xlsx, digital_pdf):
     csv_text = export_service.csv_export(data).decode("utf-8-sig")
     assert csv_text.splitlines()[0].startswith("field_key,field_label,data_type,golden")
     assert len(csv_text.strip().splitlines()) == 1 + 6
+    header, rows = export_service.comparison_rows(data)
+    correct_cols = [i for i, h in enumerate(header) if h.endswith(" correct")]
+    assert len(correct_cols) == 9 and not any(h.endswith(" status") for h in header)
+    assert all(r[i] in (True, False, None) for r in rows for i in correct_cols)
+    assert any(r[i] is True for r in rows for i in correct_cols)
+    assert "TRUE" in csv_text and ",ok" not in csv_text
     wb = load_workbook(io.BytesIO(export_service.excel_export(data)))
     assert {"Summary", "Leaderboard", "Prompt Generator Ranking", "Extraction Model Ranking", "Self vs Cross",
             "Field Comparison", "Prompts", "Executions"} <= set(wb.sheetnames)

@@ -10,6 +10,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
+from app.agents.evaluation_agent import comparable
 from app.core.utils import utcnow
 from app.db.repository import Repository
 from app.schemas.requirement import RequirementSet
@@ -62,17 +63,28 @@ def comparison_rows(data: dict[str, Any]) -> tuple[list[str], list[list[Any]]]:
     req_set = RequirementSet.model_validate(data["requirement"]["requirement_set"])
     execs = data["executions"]
     golden = (data["evaluation"] or {}).get("golden_labels") or {}
+    # With golden labels, each cell gets a TRUE/FALSE "correct" column (same lenient comparison as field
+    # accuracy). Without them there is no ground truth, so the validation status is shown instead.
+    suffix = "correct" if golden else "status"
     header = ["field_key", "field_label", "data_type"] + (["golden"] if golden else []) + \
         [f"{e['prompt_id']}x{e['extraction_slot']} value" for e in execs] + \
-        [f"{e['prompt_id']}x{e['extraction_slot']} status" for e in execs]
+        [f"{e['prompt_id']}x{e['extraction_slot']} {suffix}" for e in execs]
     rows = []
     for f in req_set.fields:
         vals, statuses = [], []
         for e in execs:
             nf = ((e.get("normalized") or {}).get("extracted_fields") or {}).get(f.key) or {}
-            vals.append(nf.get("value"))
-            fv = ((e.get("validation") or {}).get("fields") or {}).get(f.key) or {}
-            statuses.append(fv.get("status") or e["status"])
+            value = nf.get("value")
+            vals.append(value)
+            if golden:
+                if f.key not in golden:
+                    statuses.append(None)  # no golden value for this field
+                else:
+                    pred = value if e["status"] == "completed" else None
+                    statuses.append(comparable(pred, f.data_type) == comparable(golden[f.key], f.data_type))
+            else:
+                fv = ((e.get("validation") or {}).get("fields") or {}).get(f.key) or {}
+                statuses.append(fv.get("status") or e["status"])
         rows.append([f.key, f.label, f.data_type] + ([golden.get(f.key)] if golden else []) + vals + statuses)
     return header, rows
 
@@ -83,7 +95,8 @@ def csv_export(data: dict[str, Any]) -> bytes:
     w = csv.writer(buf)
     w.writerow(header)
     for r in rows:
-        w.writerow(["" if v is None else (json.dumps(v) if isinstance(v, (dict, list)) else v) for v in r])
+        w.writerow(["" if v is None else ("TRUE" if v else "FALSE") if isinstance(v, bool) else
+                    (json.dumps(v) if isinstance(v, (dict, list)) else v) for v in r])
     return buf.getvalue().encode("utf-8-sig")
 
 
