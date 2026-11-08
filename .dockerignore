@@ -1,0 +1,26 @@
+# Never send secrets or local data into the build
+.env
+.env.*
+!.env.example
+backend/data/
+data/
+outputs/
+*.db
+*.db-wal
+*.db-shm
+
+# Dependencies and build output are recreated inside the image
+**/node_modules/
+**/.venv/
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+frontend/dist/
+*.tsbuildinfo
+
+# Not needed in the image
+.git/
+.DS_Store
+*.tar
+*.tar.gz
+samples/

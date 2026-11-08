@@ -1,0 +1,15 @@
+# Run with:  docker compose up        (then open http://localhost:8000)
+# Needs a .env file next to this one with GROQ_API_KEY set (copy .env.example).
+services:
+  app:
+    build: .
+    image: n2-extraction-arena:latest
+    ports:
+      - "8000:8000"
+    env_file: .env
+    volumes:
+      - n2-data:/data
+    restart: unless-stopped
+
+volumes:
+  n2-data:

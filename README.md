@@ -78,6 +78,19 @@ Check the models are available on your Groq account. Use the "Check availability
 curl -s localhost:8000/api/v1/models/verify | python3 -m json.tool
 ```
 
+## Run with Docker (no Python, Node or Tesseract needed)
+
+One image contains the backend, the built frontend and Tesseract, all served on port 8000. You only need Docker and a `.env` file with `GROQ_API_KEY` set.
+
+```bash
+cp .env.example .env          # then set GROQ_API_KEY
+docker build -t n2-extraction-arena .
+docker run --rm -p 8000:8000 --env-file .env -v n2-data:/data n2-extraction-arena
+# open http://localhost:8000
+```
+
+Or `docker compose up`. Uploads and the SQLite database are kept in the `n2-data` volume. To run on a machine without the source code, export the image with `docker save n2-extraction-arena | gzip > n2-extraction-arena.tar.gz` and load it there with `docker load -i n2-extraction-arena.tar.gz`. Build with `--platform linux/amd64` for Windows and Intel machines. See `DOCKER_SETUP.txt` for step-by-step instructions.
+
 ## Using it
 
 1. **Requirement Studio:** upload the workbook. Fields, types, mandatory flags, instructions and rule sheets are discovered automatically. Optionally have the three models interpret it.

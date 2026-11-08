@@ -1,0 +1,154 @@
+==============================================================
+  N2 EXTRACTION ARENA - RUN WITH DOCKER
+==============================================================
+
+The Docker image has everything inside it: the backend, the web
+app and Tesseract OCR. You do NOT need Python, Node.js or
+Tesseract. You only need Docker and a Groq API key.
+
+The app runs on ONE address:  http://localhost:8000
+
+If Docker is not allowed on the computer, use WINDOWS_SETUP.txt
+instead.
+
+
+--------------------------------------------------------------
+STEP 1 - INSTALL DOCKER  (one time only)
+--------------------------------------------------------------
+
+Windows / Mac: install Docker Desktop from
+    https://www.docker.com/products/docker-desktop/
+Start Docker Desktop and wait until it says "Engine running".
+
+Check it works (Command Prompt on Windows, Terminal on Mac):
+
+docker --version
+
+
+--------------------------------------------------------------
+STEP 2 - GET THE IMAGE  (choose A or B)
+--------------------------------------------------------------
+
+A) FROM THE FILE  (no internet needed for the app itself)
+   Copy  n2-extraction-arena-amd64.tar.gz  to the computer
+   (USB drive, shared folder, cloud storage), open Command
+   Prompt in the folder that contains it, and run:
+
+docker load -i n2-extraction-arena-amd64.tar.gz
+
+   It prints:  Loaded image: n2-extraction-arena:latest-amd64
+   Use the name  n2-extraction-arena:latest-amd64  in STEP 4.
+   (This file is for Windows and Intel computers.)
+
+B) BUILD IT FROM GITHUB  (about 3-5 minutes, needs internet)
+
+git clone https://github.com/ragulpoc94-dotcom/multiagent_extraction.git
+cd multiagent_extraction
+docker build -t n2-extraction-arena .
+
+   Use the name  n2-extraction-arena  in STEP 4.
+
+
+--------------------------------------------------------------
+STEP 3 - CREATE THE KEY FILE  (one time only)
+--------------------------------------------------------------
+
+In the same folder, create a file called  .env  with this line:
+
+GROQ_API_KEY=gsk_your_key_here
+
+Windows:   notepad .env      (click Yes to create it, paste, save)
+Mac:       open -e .env       (or: nano .env)
+
+If you cloned the repo (option B) you can copy the example first:
+    Windows:  copy .env.example .env
+    Mac:      cp .env.example .env
+
+Get a free key at: https://console.groq.com/keys
+Never share or upload the .env file.
+
+
+--------------------------------------------------------------
+STEP 4 - START THE APP
+--------------------------------------------------------------
+
+Run this in the folder that has the .env file.
+(Use the image name from STEP 2.)
+
+docker run --rm --name n2-arena -p 8000:8000 --env-file .env -v n2-data:/data n2-extraction-arena:latest-amd64
+
+Wait until you see:  Application startup complete
+Then open:           http://localhost:8000
+
+Keep the window open while you use the app.
+
+Your uploads and results are saved in the Docker volume "n2-data",
+so they are still there the next time you start the app.
+
+(If you cloned the repo, "docker compose up" also works.)
+
+
+--------------------------------------------------------------
+STEP 5 - CHECK IT WORKS
+--------------------------------------------------------------
+
+1. Open  http://localhost:8000/api/v1/health
+   It should show  "ocr_available": true
+   and             "configuration_missing": []
+
+2. Open  http://localhost:8000
+   On the Overview page click "Check availability".
+   All 3 models should show as available.
+
+
+--------------------------------------------------------------
+STEP 6 - DEMO
+--------------------------------------------------------------
+
+Sample files are in the "samples" folder of the GitHub repo:
+  https://github.com/ragulpoc94-dotcom/multiagent_extraction/tree/main/samples
+
+1. Requirement Studio  -> upload  requirements_subscription_invoice.xlsx
+2. Prompt Studio       -> click   Generate 3 prompts
+3. Document Workspace  -> upload  invoice_nimbus_pro_plan.pdf (or .png)
+                          then click  Run 3 x 3 competition
+4. Competition Arena   -> watch the 9 boxes fill in
+5. Results             -> compare all 9 runs field by field
+6. Evaluation          -> Upload golden labels -> golden_labels.csv
+7. Exports             -> download the Excel report
+
+
+--------------------------------------------------------------
+STOP THE APP
+--------------------------------------------------------------
+
+Press  Ctrl + C  in the window, or in another window run:
+
+docker stop n2-arena
+
+
+--------------------------------------------------------------
+IF SOMETHING GOES WRONG
+--------------------------------------------------------------
+
+"docker" is not recognized / cannot connect to the Docker daemon
+    -> Start Docker Desktop and wait for "Engine running".
+
+"port is already allocated"
+    -> Something else uses port 8000. Use another port, e.g.
+       -p 8080:8000   and open  http://localhost:8080
+
+"env file .env not found"
+    -> Run the command in the folder that contains .env, or the
+       file was saved as .env.txt. Check with:  dir /a  (Windows)
+
+GROQ_API_KEY shown as missing
+    -> The key is not in .env. Fix the file, stop the app and
+       run STEP 4 again.
+
+"no matching manifest" or very slow on an Apple Silicon Mac
+    -> The amd64 file is for Windows/Intel. On Apple Silicon Macs
+       build the image yourself (STEP 2 option B).
+
+Delete all saved app data (cannot be undone):
+    docker volume rm n2-data

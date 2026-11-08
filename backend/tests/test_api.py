@@ -99,3 +99,19 @@ def test_competition_requires_processed_document(client, requirements_xlsx, digi
     doc = client.post("/api/v1/documents/upload", files={"file": ("s.pdf", digital_pdf, "application/pdf")}).json()["data"]
     r = client.post("/api/v1/competitions", json={"prompt_run_id": prun["id"], "document_id": doc["id"]})
     assert r.status_code == 409 and r.json()["error"]["code"] == "conflict"
+
+
+def test_serves_built_frontend_when_static_dir_set(settings, repo, tmp_path, monkeypatch):
+    dist = tmp_path / "dist"
+    (dist / "assets").mkdir(parents=True)
+    (dist / "index.html").write_text("<html>app</html>")
+    (dist / "assets" / "app.js").write_text("console.log(1)")
+    (tmp_path / "secret.txt").write_text("nope")
+    monkeypatch.setenv("STATIC_DIR", str(dist))
+    with TestClient(create_app(settings=settings, client=FakeLLM(), repo=repo)) as c:
+        assert c.get("/api/v1/health").json()["success"] is True
+        assert c.get("/").text == "<html>app</html>"
+        assert c.get("/arena").text == "<html>app</html>"          # client-side route
+        assert c.get("/assets/app.js").text == "console.log(1)"
+        assert c.get("/api/v1/does-not-exist").status_code == 404   # API 404s stay JSON
+        assert c.get("/..%2Fsecret.txt").text == "<html>app</html>"  # no escape from dist

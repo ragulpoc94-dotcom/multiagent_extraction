@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.deps import AppContext
@@ -65,7 +67,26 @@ def create_app(settings: Settings | None = None, client: LLMClient | None = None
         return JSONResponse(status_code=500, content=error_body("internal_error", "Unexpected server error"))
 
     app.include_router(router)
+
+    # Optionally serve the built frontend (used by the Docker image) from the same origin as the API.
+    static_dir = os.getenv("STATIC_DIR")
+    if static_dir and (Path(static_dir) / "index.html").is_file():
+        _mount_frontend(app, Path(static_dir).resolve())
     return app
+
+
+def _mount_frontend(app: FastAPI, dist: Path) -> None:
+    """Serve the single-page app: real files when they exist, index.html for client-side routes."""
+    index = dist / "index.html"
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def spa(full_path: str):
+        if full_path == "api" or full_path.startswith("api/"):
+            raise StarletteHTTPException(status_code=404, detail="Not Found")
+        candidate = (dist / full_path).resolve()
+        if full_path and candidate.is_file() and candidate.is_relative_to(dist):
+            return FileResponse(candidate)
+        return FileResponse(index)
 
 
 def jsonable(obj):

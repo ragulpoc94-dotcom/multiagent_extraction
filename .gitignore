@@ -34,3 +34,6 @@ frontend/dist/
 .DS_Store
 .idea/
 .vscode/
+
+# Docker image exports (large, rebuild with docker save)
+docker-images/
