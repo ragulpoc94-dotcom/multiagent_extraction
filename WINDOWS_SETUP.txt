@@ -1,0 +1,171 @@
+==============================================================
+  N2 EXTRACTION ARENA - HOW TO RUN ON WINDOWS
+==============================================================
+
+Use COMMAND PROMPT (cmd), not PowerShell.
+(PowerShell often blocks "npm" with a "running scripts is disabled" error.)
+
+To open Command Prompt: press the Windows key, type  cmd  and press Enter.
+
+Copy each command below, paste it into Command Prompt (right-click
+pastes) and press Enter.
+
+
+--------------------------------------------------------------
+STEP 1 - INSTALL THE TOOLS  (one time only)
+--------------------------------------------------------------
+
+Run these four commands one by one. Accept any prompts.
+
+winget install -e --id Python.Python.3.12
+winget install -e --id OpenJS.NodeJS.LTS
+winget install -e --id Git.Git
+winget install -e --id UB-Mannheim.TesseractOCR
+
+If "winget" is not recognized, download and install these instead:
+  - Python 3.12 : https://python.org
+                  (tick "Add python.exe to PATH" during setup)
+  - Node.js LTS : https://nodejs.org
+  - Git         : https://git-scm.com
+  - Tesseract   : https://github.com/UB-Mannheim/tesseract/wiki
+                  (keep the default folder C:\Program Files\Tesseract-OCR)
+
+IMPORTANT: close Command Prompt and open a NEW one now.
+
+Check everything is installed (each line should print a version):
+
+py -3.12 --version
+node --version
+git --version
+"C:\Program Files\Tesseract-OCR\tesseract.exe" --version
+
+
+--------------------------------------------------------------
+STEP 2 - DOWNLOAD THE CODE AND ADD THE GROQ KEY  (one time only)
+--------------------------------------------------------------
+
+cd %USERPROFILE%\Desktop
+git clone https://github.com/ragulpoc94-dotcom/multiagent_extraction.git
+cd multiagent_extraction
+copy .env.example .env
+notepad .env
+
+In the Notepad window that opens, change the line
+
+    GROQ_API_KEY=
+
+to
+
+    GROQ_API_KEY=gsk_your_key_here
+
+(no spaces, no quotes). Save (Ctrl + S) and close Notepad.
+Get a free key at: https://console.groq.com/keys
+Never share or upload the .env file.
+
+
+--------------------------------------------------------------
+STEP 3 - INSTALL THE APP  (one time only, takes a few minutes)
+--------------------------------------------------------------
+
+cd %USERPROFILE%\Desktop\multiagent_extraction\backend
+py -3.12 -m venv .venv
+.venv\Scripts\pip install -r requirements-dev.txt
+
+cd %USERPROFILE%\Desktop\multiagent_extraction\frontend
+npm install
+
+
+--------------------------------------------------------------
+STEP 4 - START THE APP  (every time)
+--------------------------------------------------------------
+
+Open TWO Command Prompt windows.
+
+WINDOW 1 - BACKEND (copy all three lines):
+
+cd %USERPROFILE%\Desktop\multiagent_extraction\backend
+set "PATH=%PATH%;C:\Program Files\Tesseract-OCR"
+.venv\Scripts\uvicorn app.main:app --port 8000
+
+  Wait until you see:  Application startup complete
+
+WINDOW 2 - FRONTEND:
+
+cd %USERPROFILE%\Desktop\multiagent_extraction\frontend
+npm run dev
+
+  Wait until you see:  Local: http://localhost:5173/
+
+Keep both windows open while you use the app.
+
+
+--------------------------------------------------------------
+STEP 5 - CHECK IT WORKS
+--------------------------------------------------------------
+
+1. Open in a browser:  http://localhost:8000/api/v1/health
+   It should show  "ocr_available": true
+   and             "configuration_missing": []
+
+2. Open the app:  http://localhost:5173
+   On the Overview page click "Check availability".
+   All 3 models should show as available.
+
+
+--------------------------------------------------------------
+STEP 6 - DEMO (files are in Desktop\multiagent_extraction\samples)
+--------------------------------------------------------------
+
+1. Requirement Studio  -> upload  requirements_subscription_invoice.xlsx
+2. Prompt Studio       -> click   Generate 3 prompts
+3. Document Workspace  -> upload  invoice_nimbus_pro_plan.pdf
+                          (or the .png to show OCR)
+                          then click  Run 3 x 3 competition
+4. Competition Arena   -> watch the 9 boxes fill in, click one for details
+5. Results             -> compare all 9 runs field by field
+6. Evaluation          -> click Upload golden labels -> golden_labels.csv
+7. Exports             -> download the Excel report
+
+
+--------------------------------------------------------------
+STOP THE APP
+--------------------------------------------------------------
+
+Press  Ctrl + C  in both windows.
+
+
+--------------------------------------------------------------
+GET THE LATEST CHANGES LATER
+--------------------------------------------------------------
+
+cd %USERPROFILE%\Desktop\multiagent_extraction
+git pull
+
+(If the requirements changed, repeat STEP 3.)
+
+
+--------------------------------------------------------------
+IF SOMETHING GOES WRONG
+--------------------------------------------------------------
+
+'py' is not recognized
+    -> Python is not installed or not on PATH. Reinstall with
+       "Add to PATH" ticked, then open a NEW Command Prompt.
+
+'npm' is not recognized
+    -> Install Node.js, then open a NEW Command Prompt.
+
+"ocr_available": false
+    -> Tesseract is not in C:\Program Files\Tesseract-OCR.
+       Find where it was installed and use that folder in the
+       "set PATH" line of WINDOW 1.
+
+GROQ_API_KEY shown as missing
+    -> The key is not saved in .env, or the file was saved as
+       .env.txt. Run  notepad .env  again, paste the key, save.
+
+Port 8000 or 5173 already in use
+    -> An old window is still running. Close it or press Ctrl + C.
+
+Windows Firewall pop-up
+    -> Click Allow. The app only runs on this computer.
