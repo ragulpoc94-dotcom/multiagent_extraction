@@ -89,6 +89,12 @@ docker run --rm -p 8000:8000 --env-file .env -v n2-data:/data n2-extraction-aren
 # open http://localhost:8000
 ```
 
+A ready-made image (amd64 and arm64) is published to GitHub Container Registry on every push to `main`, so you can skip the build:
+
+```bash
+docker run --rm -p 8000:8000 --env-file .env -v n2-data:/data ghcr.io/ragulpoc94-dotcom/multiagent_extraction:latest
+```
+
 Or `docker compose up`. Uploads and the SQLite database are kept in the `n2-data` volume. To run on a machine without the source code, export the image with `docker save n2-extraction-arena | gzip > n2-extraction-arena.tar.gz` and load it there with `docker load -i n2-extraction-arena.tar.gz`. Build with `--platform linux/amd64` for Windows and Intel machines. See `DOCKER_SETUP.txt` for step-by-step instructions.
 
 ## Using it

@@ -26,34 +26,42 @@ docker --version
 
 
 --------------------------------------------------------------
-STEP 2 - GET THE IMAGE  (choose A or B)
+STEP 2 - GET THE IMAGE  (choose A, B or C)
 --------------------------------------------------------------
 
-A) FROM THE FILE  (no internet needed for the app itself)
-   Copy  n2-extraction-arena-amd64.tar.gz  to the computer
-   (USB drive, shared folder, cloud storage), open Command
-   Prompt in the folder that contains it, and run:
+A) DOWNLOAD THE READY IMAGE FROM GITHUB  (recommended, ~2 minutes)
+   Nothing to clone or build. Works on Windows, Intel and Apple
+   Silicon computers. Run:
 
-docker load -i n2-extraction-arena-amd64.tar.gz
+docker pull ghcr.io/ragulpoc94-dotcom/multiagent_extraction:latest
 
-   It prints:  Loaded image: n2-extraction-arena:latest-amd64
-   Use the name  n2-extraction-arena:latest-amd64  in STEP 4.
-   (This file is for Windows and Intel computers.)
+   Use the name  ghcr.io/ragulpoc94-dotcom/multiagent_extraction:latest
+   in STEP 4.
 
-B) BUILD IT FROM GITHUB  (about 3-5 minutes, needs internet)
+B) BUILD IT FROM GITHUB  (about 3-5 minutes, needs Git)
 
 git clone https://github.com/ragulpoc94-dotcom/multiagent_extraction.git
 cd multiagent_extraction
 docker build -t n2-extraction-arena .
 
    Use the name  n2-extraction-arena  in STEP 4.
+   (No Git? On the GitHub page click Code -> Download ZIP, unzip,
+   and run the docker build line inside the folder.)
+
+C) FROM AN IMAGE FILE  (if you have n2-extraction-arena-amd64.tar.gz)
+
+docker load -i n2-extraction-arena-amd64.tar.gz
+
+   Use the name  n2-extraction-arena:latest-amd64  in STEP 4.
+   (This file is for Windows and Intel computers.)
 
 
 --------------------------------------------------------------
 STEP 3 - CREATE THE KEY FILE  (one time only)
 --------------------------------------------------------------
 
-In the same folder, create a file called  .env  with this line:
+Make a folder for the app (for example Desktop\n2-arena), open
+Command Prompt there, and create a file called  .env  with this line:
 
 GROQ_API_KEY=gsk_your_key_here
 
@@ -73,9 +81,10 @@ STEP 4 - START THE APP
 --------------------------------------------------------------
 
 Run this in the folder that has the .env file.
-(Use the image name from STEP 2.)
+(This is for option A. For B or C, replace the last part with the
+image name from STEP 2.)
 
-docker run --rm --name n2-arena -p 8000:8000 --env-file .env -v n2-data:/data n2-extraction-arena:latest-amd64
+docker run --rm --name n2-arena -p 8000:8000 --env-file .env -v n2-data:/data ghcr.io/ragulpoc94-dotcom/multiagent_extraction:latest
 
 Wait until you see:  Application startup complete
 Then open:           http://localhost:8000
@@ -147,8 +156,15 @@ GROQ_API_KEY shown as missing
        run STEP 4 again.
 
 "no matching manifest" or very slow on an Apple Silicon Mac
-    -> The amd64 file is for Windows/Intel. On Apple Silicon Macs
-       build the image yourself (STEP 2 option B).
+    -> The amd64 file (option C) is for Windows/Intel. Use option A
+       or B instead.
+
+"denied" or "unauthorized" when pulling (option A)
+    -> The image is not public yet. Use option B, or ask the repo
+       owner to make the package public on GitHub.
+
+Get the newest version of the image (option A):
+    docker pull ghcr.io/ragulpoc94-dotcom/multiagent_extraction:latest
 
 Delete all saved app data (cannot be undone):
     docker volume rm n2-data
