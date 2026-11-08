@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, BrainCircuit, FileSpreadsheet, ScrollText, Sparkles } from "lucide-react";
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dropzone, EmptyState, ErrorBanner, ModelChip, PageHeader, Spinner } from "@/components/common";
 import { RequirementPicker } from "@/components/pickers";
