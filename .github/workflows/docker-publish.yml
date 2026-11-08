@@ -1,11 +1,16 @@
 # Builds the Docker image (Windows/Intel and Apple Silicon) and publishes it to GitHub Container Registry:
 #   ghcr.io/ragulpoc94-dotcom/multiagent_extraction:latest
-# Runs on every push to main, and can be started by hand from the Actions tab.
+# Runs on pushes to main that change the app, and can be started by hand from the Actions tab.
 name: Publish Docker image
 
 on:
   push:
     branches: [main]
+    # Docs and sample files don't change the image ('*' does not cross '/', so backend/requirements.txt still counts).
+    paths-ignore:
+      - "*.md"
+      - "*.txt"
+      - "samples/**"
   workflow_dispatch:
 
 concurrency:

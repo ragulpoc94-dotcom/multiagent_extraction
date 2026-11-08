@@ -1,0 +1,202 @@
+==============================================================
+  N2 EXTRACTION ARENA - DEMO MACHINE QUICK START (DOCKER)
+==============================================================
+
+The whole app is published as a ready-made Docker image:
+
+    ghcr.io/ragulpoc94-dotcom/multiagent_extraction:latest
+
+It contains the backend, the web app and Tesseract OCR. On the demo
+machine you only need:
+
+    1. Docker (Docker Desktop)
+    2. Internet access (to download the image and to reach Groq)
+    3. Your Groq API key
+
+No Git, no cloning, no Python, no Node.js.
+
+Use COMMAND PROMPT on Windows (Windows key, type  cmd , Enter).
+Copy each command, paste it (right-click), press Enter.
+
+
+--------------------------------------------------------------
+STEP 1 - INSTALL DOCKER DESKTOP  (one time only)
+--------------------------------------------------------------
+
+Before you start, check:
+  - Windows 10 or 11, 64-bit
+  - You have admin rights
+  - Virtualization is on: Task Manager (Ctrl + Shift + Esc)
+    -> Performance -> CPU -> "Virtualization: Enabled"
+
+a) Open Command Prompt AS ADMINISTRATOR
+   (right-click Command Prompt -> Run as administrator) and run:
+
+wsl --install
+
+   Restart the computer when it finishes.
+   (If it says WSL is already installed, run:  wsl --update )
+
+b) Install Docker Desktop:
+
+winget install -e --id Docker.DockerDesktop
+
+   Or download it from https://www.docker.com/products/docker-desktop/
+   Keep "Use WSL 2 instead of Hyper-V" ticked. Log out / restart if asked.
+
+c) Open Docker Desktop from the Start menu, accept the agreement,
+   skip sign-in, and wait for  "Engine running"  (bottom left, green).
+
+d) Check it works (open a NEW Command Prompt):
+
+docker run --rm hello-world
+
+   You should see  "Hello from Docker!"
+
+
+--------------------------------------------------------------
+STEP 2 - MAKE A FOLDER AND ADD YOUR GROQ KEY  (one time only)
+--------------------------------------------------------------
+
+mkdir %USERPROFILE%\Desktop\n2-arena
+cd %USERPROFILE%\Desktop\n2-arena
+notepad .env
+
+Notepad asks "Do you want to create a new file?" -> click Yes.
+Type this one line (your real key, no spaces, no quotes):
+
+GROQ_API_KEY=gsk_your_key_here
+
+Save (Ctrl + S) and close Notepad.
+Get a free key at: https://console.groq.com/keys
+Never share or upload the .env file.
+
+
+--------------------------------------------------------------
+STEP 3 - PULL (DOWNLOAD) THE APP
+--------------------------------------------------------------
+
+docker pull ghcr.io/ragulpoc94-dotcom/multiagent_extraction:latest
+
+About 250 MB. No GitHub login needed (the image is public).
+Do this the day BEFORE the demo so it is already downloaded.
+
+
+--------------------------------------------------------------
+STEP 4 - START THE APP  (every time)
+--------------------------------------------------------------
+
+Make sure Docker Desktop shows "Engine running", then:
+
+cd %USERPROFILE%\Desktop\n2-arena
+docker run --rm --name n2-arena -p 8000:8000 --env-file .env -v n2-data:/data ghcr.io/ragulpoc94-dotcom/multiagent_extraction:latest
+
+Wait until you see:  Application startup complete
+Keep this window open during the demo.
+
+Open in the browser:  http://localhost:8000
+
+Your uploads and results are kept in the Docker volume "n2-data",
+so they are still there the next time you start the app.
+
+
+--------------------------------------------------------------
+STEP 5 - CHECK IT WORKS
+--------------------------------------------------------------
+
+1. http://localhost:8000/api/v1/health  should show
+       "ocr_available": true   and   "configuration_missing": []
+
+2. http://localhost:8000  -> Overview page -> "Check availability"
+   All 3 models should show as available.
+
+
+--------------------------------------------------------------
+STEP 6 - RUN THE DEMO
+--------------------------------------------------------------
+
+Download the 3 sample files (open each link, click the download
+icon at the top right of the file):
+
+  https://github.com/ragulpoc94-dotcom/multiagent_extraction/blob/main/samples/requirements_subscription_invoice.xlsx
+  https://github.com/ragulpoc94-dotcom/multiagent_extraction/blob/main/samples/invoice_nimbus_pro_plan.pdf
+  https://github.com/ragulpoc94-dotcom/multiagent_extraction/blob/main/samples/golden_labels.csv
+
+Then in the app:
+
+1. Requirement Studio  -> upload  requirements_subscription_invoice.xlsx
+2. Prompt Studio       -> click   Generate 3 prompts
+3. Document Workspace  -> upload  invoice_nimbus_pro_plan.pdf
+                          then click  Run 3 x 3 competition
+4. Competition Arena   -> watch the 9 boxes fill in, click one
+5. Results             -> compare all 9 runs field by field
+6. Evaluation          -> Upload golden labels -> golden_labels.csv
+7. Exports             -> download the Excel report
+
+
+--------------------------------------------------------------
+STOP THE APP
+--------------------------------------------------------------
+
+Press  Ctrl + C  in the window, or in another window run:
+
+docker stop n2-arena
+
+
+--------------------------------------------------------------
+GET THE NEWEST VERSION LATER
+--------------------------------------------------------------
+
+The image is rebuilt automatically whenever code is pushed to main
+on GitHub. To update the demo machine:
+
+docker pull ghcr.io/ragulpoc94-dotcom/multiagent_extraction:latest
+
+Then start the app again (STEP 4).
+
+
+--------------------------------------------------------------
+IF SOMETHING GOES WRONG
+--------------------------------------------------------------
+
+"docker" is not recognized / cannot connect to the Docker daemon
+    -> Start Docker Desktop and wait for "Engine running".
+       Open a NEW Command Prompt after installing.
+
+"env file .env not found"
+    -> You are not in the n2-arena folder, or Notepad saved it as
+       .env.txt. Run  dir  to check.
+
+"port is already allocated"
+    -> Use another port: change  -p 8000:8000  to  -p 8080:8000
+       and open  http://localhost:8080
+
+'Conflict ... name "/n2-arena" is already in use'
+    -> docker rm -f n2-arena    then run STEP 4 again.
+
+GROQ_API_KEY shown as missing / models not available
+    -> Fix the key in .env, stop the app, run STEP 4 again.
+
+The pull fails, or "Check availability" fails
+    -> The network may block ghcr.io or api.groq.com (common on
+       company networks). Try another network, e.g. a phone hotspot.
+
+"WSL 2 installation is incomplete"
+    -> Run  wsl --update  as Administrator, restart Docker Desktop.
+
+"Virtualization support not detected"
+    -> Virtualization must be turned on in the BIOS (ask IT).
+
+
+--------------------------------------------------------------
+NO DOCKER ON THE DEMO MACHINE?
+--------------------------------------------------------------
+
+Follow  WINDOWS_SETUP.txt  in the GitHub repo instead (installs
+Python, Node.js and Tesseract; the app then runs on
+http://localhost:5173):
+
+  https://github.com/ragulpoc94-dotcom/multiagent_extraction/blob/main/WINDOWS_SETUP.txt
+
+If nothing can be installed, share your screen from a computer
+where the app already runs.
