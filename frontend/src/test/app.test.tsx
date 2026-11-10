@@ -40,6 +40,23 @@ describe("navigation", () => {
   });
 });
 
+describe("prompt studio", () => {
+  it("shows a self-assessed confidence score under each generated prompt", async () => {
+    localStorage.setItem("n2.workspace", JSON.stringify({ requirementId: "req_1", promptRunId: "prun_1", documentId: null, competitionId: null }));
+    renderApp("/prompts");
+    const panels = await screen.findAllByRole("region", { name: "Self-assessed confidence score" });
+    expect(panels).toHaveLength(3);
+    expect(within(panels[0]).getByText("86%")).toBeInTheDocument();
+    expect(within(panels[1]).getByText("55%")).toBeInTheDocument();
+    expect(within(panels[2]).getByText(/per-minute token limit/)).toBeInTheDocument();
+    // weakest fields are listed first
+    const items = within(panels[0]).getAllByRole("listitem");
+    expect(items[0]).toHaveTextContent("invoice_date");
+    fireEvent.click(within(panels[0]).getByRole("button", { name: /Why this score/ }));
+    expect(within(panels[0]).getByText("Dates are DD/MM/YYYY")).toBeInTheDocument();
+  });
+});
+
 describe("competition arena", () => {
   it("renders the 3 × 3 matrix from live status", async () => {
     renderApp("/arena");

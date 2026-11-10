@@ -34,7 +34,8 @@ def prompts_export(data: dict[str, Any]) -> dict[str, Any]:
     return {"prompt_run_id": data["prompt_run"]["id"], "requirement": data["requirement"]["filename"],
             "exported_at": utcnow(),
             "prompts": [{k: p.get(k) for k in ("prompt_id", "slot", "model_id", "status", "prompt_text",
-                                                "created_at", "latency_ms", "usage", "checks", "error")}
+                                                "created_at", "latency_ms", "usage", "checks", "self_assessment",
+                                                "error")}
                         for p in data["prompt_run"]["prompts"]]}
 
 

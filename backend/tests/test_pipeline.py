@@ -57,6 +57,40 @@ def test_three_prompts_generated_and_stored(repo, settings, requirements_xlsx):
     assert repo.get("prompt_runs", prun["id"])["prompts"][0]["prompt_text"] == ps[0]["prompt_text"]
 
 
+def test_prompts_carry_self_assessed_confidence(repo, settings, requirements_xlsx):
+    req = requirement_agent.ingest(repo, requirements_xlsx, "req.xlsx")
+    prun = run(prompt_agent.generate(repo, FakeLLM(bad_assessment={"model-b"}), settings, req["id"]))
+    assert prun["status"] == "completed"  # an unusable self-assessment never fails the prompt
+    by_slot = {p["slot"]: p["self_assessment"] for p in prun["prompts"]}
+    a = by_slot["M1"]
+    keys = [f["key"] for f in a["fields"]]
+    assert a["status"] == "completed" and a["overall_confidence"] == 82
+    assert "invented_field" not in keys and a["fields_not_assessed"] == []
+    assert a["fields"][0]["confidence"] == "low" and a["assumptions"] and a["risks"]
+    assert by_slot["M2"]["status"] == "failed" and "Unusable" in by_slot["M2"]["error"]
+    assert repo.get("prompt_runs", prun["id"])["prompts"][0]["self_assessment"]["overall_confidence"] == 82
+
+
+def test_prompt_calls_use_low_reasoning_effort_but_extraction_does_not(repo, settings, requirements_xlsx, digital_pdf):
+    llm = FakeLLM()
+    run_ = setup_pipeline(repo, settings, requirements_xlsx, digital_pdf, llm)
+    prompt_calls = [c for c in llm.calls if "prompt engineer" in c["system"] or "reviewer" in c["system"]]
+    assert len(prompt_calls) == 6 and all(c["reasoning_effort"] == "low" for c in prompt_calls)
+    llm.calls.clear()
+    run(extraction_agent.run_competition(repo, llm, settings, run_[3]["id"]))
+    assert llm.calls and all(c["reasoning_effort"] is None for c in llm.calls)
+
+
+@pytest.mark.parametrize("raw,expected", [(0.85, 85), (85, 85), ("70%", 70), (140, 100), (-5, 0)])
+def test_self_assessment_score_is_normalised(raw, expected, repo, requirements_xlsx):
+    from app.schemas.requirement import RequirementSet
+    req = requirement_agent.ingest(repo, requirements_xlsx, "req.xlsx")
+    req_set = RequirementSet.model_validate(req["requirement_set"])
+    out = prompt_agent.parse_assessment(json.dumps({"overall_confidence": raw, "fields": []}), req_set)
+    assert out["overall_confidence"] == expected
+    assert out["fields_not_assessed"] == req_set.field_keys()
+
+
 def test_missing_configuration_is_explicit(repo, settings, requirements_xlsx):
     settings.groq_api_key = None
     req = requirement_agent.ingest(repo, requirements_xlsx, "req.xlsx")

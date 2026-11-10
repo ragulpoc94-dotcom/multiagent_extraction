@@ -44,7 +44,8 @@ class LLMError(Exception):
 
 class LLMClient(Protocol):
     async def complete(self, model: str, messages: list[dict[str, str]], *, json_mode: bool = False,
-                       max_tokens: int | None = None, temperature: float | None = None) -> LLMResult: ...
+                       max_tokens: int | None = None, temperature: float | None = None,
+                       reasoning_effort: str | None = None) -> LLMResult: ...
 
     async def list_models(self) -> list[str]: ...
 
@@ -146,9 +147,11 @@ class GroqLLMClient:
 
     # -- Public API ----------------------------------------------------
     async def complete(self, model: str, messages: list[dict[str, str]], *, json_mode: bool = False,
-                       max_tokens: int | None = None, temperature: float | None = None) -> LLMResult:
+                       max_tokens: int | None = None, temperature: float | None = None,
+                       reasoning_effort: str | None = None) -> LLMResult:
         notes: list[str] = []
         use_json = json_mode
+        effort = reasoning_effort
         attempt = 0
         max_attempts = self.settings.max_retries + 1
         async with self._semaphore:
@@ -162,6 +165,8 @@ class GroqLLMClient:
                 }
                 if use_json:
                     kwargs["response_format"] = {"type": "json_object"}
+                if effort:
+                    kwargs["reasoning_effort"] = effort
                 await self._limiter.acquire()
                 started = time.perf_counter()
                 try:
@@ -170,6 +175,12 @@ class GroqLLMClient:
                 except Exception as exc:  # noqa: BLE001 - classified below
                     retryable, status, retry_after, kind = classify_exception(exc)
                     msg = _safe_message(exc)
+                    if kind == "bad_request" and effort and "reasoning" in msg.lower():
+                        # Model doesn't support this reasoning effort: retry once with its default.
+                        notes.append("reasoning_effort_rejected_fallback_to_default")
+                        effort = None
+                        attempt -= 1
+                        continue
                     if kind == "bad_request" and use_json and ("json" in msg.lower() or "response_format" in msg.lower()):
                         # Model rejected or failed JSON mode: retry once in plain mode; output
                         # is still parsed & validated strictly downstream.

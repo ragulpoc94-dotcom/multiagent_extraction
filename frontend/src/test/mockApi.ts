@@ -24,6 +24,26 @@ const ROUTES: Record<string, unknown> = {
   "/api/v1/competitions/run_1/status": { id: "run_1", status: "completed_with_errors", is_running: false, started_at: new Date(Date.now() - 30000).toISOString(), finished_at: new Date().toISOString(), error: null, chunk_count: 1, counts: { completed: 8, failed: 1 }, cells },
   "/api/v1/competitions/run_1/results": { competition: {}, fields: [], executions: [] },
   "/api/v1/requirements": [],
+  "/api/v1/prompts": [{ id: "prun_1", status: "completed", created_at: new Date().toISOString(), prompts: [] }],
+  "/api/v1/prompts/prun_1": {
+    id: "prun_1", requirement_id: "req_1", status: "completed", created_at: new Date().toISOString(), models: MODELS,
+    prompts: SLOTS.map((s, i) => ({
+      slot: s, prompt_id: `P${i + 1}`, model_id: MODELS[s], status: "completed", prompt_text: `Prompt written by ${s}. Extract every field as JSON.`,
+      started_at: "", created_at: new Date().toISOString(), latency_ms: 900, usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+      used_own_interpretation: false,
+      checks: { field_key_coverage: 1, fields_not_mentioned: [], mentions_null_handling: true, mentions_evidence: true, mentions_page: true, requests_json_only: true, characters: 48 },
+      self_assessment: s === "M3"
+        ? { status: "failed", error: "Error code: 429 - Request too large for model on output tokens per minute" }
+        : {
+            status: "completed", overall_confidence: s === "M1" ? 86 : 55, summary: `${s} summary of its confidence`,
+            fields: [
+              { key: "customer_name", confidence: "high", reason: "Clearly labelled" },
+              { key: "invoice_date", confidence: "low", reason: "Date format not specified" },
+            ],
+            fields_not_assessed: [], assumptions: ["Dates are DD/MM/YYYY"], risks: ["invoice_date may be confused with due date"],
+          },
+    })),
+  },
   "/api/v1/documents": [],
 };
 
