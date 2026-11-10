@@ -63,6 +63,10 @@ class Settings(BaseModel):
     # LLM generation
     max_output_tokens: int = 4096
     prompt_max_output_tokens: int = 3000
+    # Reasoning models (gpt-oss, qwen3) spend output tokens "thinking" before answering. For
+    # prompt writing and self-assessment, low effort leaves room for the actual answer.
+    # Empty = use each model's default.
+    prompt_reasoning_effort: str | None = "low"
     temperature: float = 0.0
 
     # Document handling
@@ -119,6 +123,7 @@ class Settings(BaseModel):
             "requests_per_minute": _int("REQUESTS_PER_MINUTE", 30),
             "max_output_tokens": _int("MAX_OUTPUT_TOKENS", 4096),
             "prompt_max_output_tokens": _int("PROMPT_MAX_OUTPUT_TOKENS", 3000),
+            "prompt_reasoning_effort": (os.getenv("PROMPT_REASONING_EFFORT", "low") or "").strip() or None,
             "temperature": _float("TEMPERATURE", 0.0),
             "max_document_tokens": _int("MAX_DOCUMENT_TOKENS", 6000),
             "ocr_language": os.getenv("OCR_LANGUAGE", "eng"),

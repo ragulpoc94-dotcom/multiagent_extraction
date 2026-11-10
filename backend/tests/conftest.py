@@ -91,24 +91,29 @@ class FakeLLM:
 
     * understanding calls -> interpretation JSON
     * prompt-generation calls -> a prompt naming the generating model
+    * prompt self-assessment calls -> a confidence JSON (``bad_assessment`` models return junk)
     * extraction calls -> reads "Label: value" lines from the document text.
     Behaviour per model is configurable to simulate failures and malformed output.
     """
 
     def __init__(self, *, fail_models: set[str] | None = None, malformed: set[tuple[str, str]] | None = None,
-                 drop_field: dict[str, str] | None = None, invent: set[str] | None = None):
+                 drop_field: dict[str, str] | None = None, invent: set[str] | None = None,
+                 bad_assessment: set[str] | None = None):
         self.fail_models = fail_models or set()
         self.malformed = malformed or set()  # (prompt_id, model)
         self.drop_field = drop_field or {}  # model -> key omitted
         self.invent = invent or set()  # models that hallucinate email
+        self.bad_assessment = bad_assessment or set()  # models whose self-assessment is unusable
         self.calls: list[dict] = []
 
     async def list_models(self) -> list[str]:
         return ["model-a", "model-b", "model-c"]
 
-    async def complete(self, model, messages, *, json_mode=False, max_tokens=None, temperature=None):
+    async def complete(self, model, messages, *, json_mode=False, max_tokens=None, temperature=None,
+                       reasoning_effort=None):
         system, user = messages[0]["content"], messages[-1]["content"]
-        self.calls.append({"model": model, "system": system, "user": user, "json_mode": json_mode})
+        self.calls.append({"model": model, "system": system, "user": user, "json_mode": json_mode,
+                           "max_tokens": max_tokens, "reasoning_effort": reasoning_effort})
         if model in self.fail_models:
             raise LLMError("simulated 429 exhausted", retryable=True, status_code=429, attempts=3, kind="rate_limited")
         usage = {"prompt_tokens": len(user) // 4, "completion_tokens": 50, "total_tokens": len(user) // 4 + 50}
@@ -118,6 +123,15 @@ class FakeLLM:
             return LLMResult(json.dumps({"summary": f"{model} summary", "fields": fields,
                                          "business_rules": ["no inference"], "ambiguities": []}),
                              model, 5, 1, usage, json_mode)
+        if "reviewer of extraction prompts" in system:
+            if model in self.bad_assessment:
+                return LLMResult("I feel good about it.", model, 3, 1, usage, json_mode)
+            keys = re.search(r"in this order: (.+)", user).group(1).split(", ")
+            fields = [{"key": k, "confidence": ("low" if i == 0 else "high"), "reason": "test"} for i, k in enumerate(keys)]
+            fields.append({"key": "invented_field", "confidence": "high", "reason": "not in workbook"})
+            return LLMResult(json.dumps({"overall_confidence": 82, "summary": f"{model} is fairly confident",
+                                         "fields": fields, "assumptions": ["dates are DD/MM/YYYY"],
+                                         "risks": [f"{keys[0]} may be ambiguous"]}), model, 4, 1, usage, json_mode)
         if "prompt engineer" in system:
             keys = re.search(r"refer to fields by these keys: (.+)", user).group(1)
             return LLMResult(f"You are {model}'s extractor. Extract each field atomically: {keys}. "

@@ -115,6 +115,22 @@ export interface GeneratedPrompt {
     requests_json_only: boolean;
     characters: number;
   };
+  self_assessment?: PromptSelfAssessment;
+}
+
+export type ConfidenceLevel = "high" | "medium" | "low";
+
+export interface PromptSelfAssessment {
+  status: "completed" | "failed";
+  error?: string;
+  overall_confidence?: number;
+  summary?: string | null;
+  fields?: { key: string; confidence: ConfidenceLevel; reason: string | null }[];
+  fields_not_assessed?: string[];
+  assumptions?: string[];
+  risks?: string[];
+  latency_ms?: number;
+  usage?: Usage;
 }
 
 export interface PromptRun {

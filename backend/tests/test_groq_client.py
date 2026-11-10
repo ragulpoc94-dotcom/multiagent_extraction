@@ -76,6 +76,19 @@ def test_non_retryable_fails_fast(s):
     assert ei.value.kind == "model_not_found" and ei.value.attempts == 1 and not c.sleeps
 
 
+def test_reasoning_effort_sent_and_dropped_if_rejected(s):
+    c = ScriptedClient(s, [_resp("a")])
+    run(c.complete("m", [], reasoning_effort="low"))
+    assert c.kwargs[0]["reasoning_effort"] == "low"
+    c = ScriptedClient(s, [StatusErr(400, "reasoning_effort is not supported with this model"), _resp("b")])
+    res = run(c.complete("m", [], reasoning_effort="low"))
+    assert res.text == "b" and "reasoning_effort" not in c.kwargs[1]
+    assert "reasoning_effort_rejected_fallback_to_default" in res.notes
+    c = ScriptedClient(s, [_resp("c")])
+    run(c.complete("m", []))
+    assert "reasoning_effort" not in c.kwargs[0]
+
+
 def test_json_mode_rejection_falls_back_once(s):
     c = ScriptedClient(s, [StatusErr(400, "json_validate_failed"), _resp("{}")])
     res = run(c.complete("a", [], json_mode=True))

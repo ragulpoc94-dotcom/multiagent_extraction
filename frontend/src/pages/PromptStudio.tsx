@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronDown, ChevronUp, FileSearch, ScrollText, Sparkles, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, FileSearch, Gauge, ScrollText, Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CopyButton, EmptyState, ErrorBanner, ModelChip, PageHeader, Spinner } from "@/components/common";
@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { NativeSelect } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
-import type { GeneratedPrompt } from "@/lib/types";
+import type { ConfidenceLevel, GeneratedPrompt, PromptSelfAssessment } from "@/lib/types";
 import { cn, ms, num, pct, when } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
 
@@ -100,6 +100,89 @@ function Check1({ ok, label }: { ok: boolean; label: string }) {
   );
 }
 
+const LEVEL_ORDER: Record<ConfidenceLevel, number> = { low: 0, medium: 1, high: 2 };
+const LEVEL_DOT: Record<ConfidenceLevel, string> = { high: "bg-success", medium: "bg-warning", low: "bg-danger" };
+
+function scoreTone(score: number) {
+  return score >= 80 ? "success" : score >= 60 ? "warning" : "danger";
+}
+
+function SelfAssessmentPanel({ a }: { a?: PromptSelfAssessment }) {
+  const [why, setWhy] = useState(false);
+  if (!a) return null;
+  if (a.status !== "completed" || a.overall_confidence == null) {
+    return (
+      <section aria-label="Self-assessed confidence score" className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+        <p className="font-medium text-foreground">Self-assessed confidence score</p>
+        <p className="mt-1">
+          {/rate.?limit|too large|429/i.test(a.error ?? "")
+            ? "Not available: the provider's per-minute token limit for this model was reached. Wait a minute, then regenerate."
+            : "Not available: the model didn't return a usable self-assessment."}
+        </p>
+      </section>
+    );
+  }
+  const score = a.overall_confidence;
+  const tone = scoreTone(score);
+  const fields = [...(a.fields ?? [])].sort((x, y) => LEVEL_ORDER[x.confidence] - LEVEL_ORDER[y.confidence]);
+  const counts = { high: 0, medium: 0, low: 0 };
+  fields.forEach((f) => counts[f.confidence]++);
+  const hasWhy = (a.assumptions?.length ?? 0) + (a.risks?.length ?? 0) > 0;
+  return (
+    <section aria-label="Self-assessed confidence score" className="space-y-3 rounded-md border bg-muted/20 p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="flex items-center gap-1.5 text-xs font-medium"><Gauge className="h-3.5 w-3.5" /> Self-assessed confidence score</p>
+          {a.summary && <p className="mt-1 text-xs text-muted-foreground">{a.summary}</p>}
+        </div>
+        <span className={cn("tabular shrink-0 text-2xl font-semibold leading-none", { success: "text-success", warning: "text-warning", danger: "text-danger" }[tone])}>
+          {score}%
+        </span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={score} aria-label="Confidence">
+        <div className={cn("h-full rounded-full", { success: "bg-success", warning: "bg-warning", danger: "bg-danger" }[tone])} style={{ width: `${score}%` }} />
+      </div>
+      {fields.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="tabular text-2xs text-muted-foreground">
+            Per field: {counts.high} high · {counts.medium} medium · {counts.low} low
+            {a.fields_not_assessed && a.fields_not_assessed.length > 0 && ` · ${a.fields_not_assessed.length} not assessed`}
+          </p>
+          <ul className="max-h-40 space-y-1 overflow-y-auto pr-1 scrollbar-thin">
+            {fields.map((f) => (
+              <li key={f.key} className="flex items-start gap-2 text-xs">
+                <span className={cn("mt-1 h-2 w-2 shrink-0 rounded-full", LEVEL_DOT[f.confidence])} aria-label={f.confidence} />
+                <span className="min-w-0">
+                  <span className="font-mono">{f.key}</span>
+                  {f.reason && <span className="text-muted-foreground"> · {f.reason}</span>}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {hasWhy && (
+        <div>
+          <Button variant="ghost" size="sm" className="-ml-2" onClick={() => setWhy(!why)} aria-expanded={why}>
+            {why ? <ChevronUp /> : <ChevronDown />} Why this score?
+          </Button>
+          {why && (
+            <div className="mt-1 space-y-2 text-xs">
+              {a.assumptions && a.assumptions.length > 0 && (
+                <div><p className="font-medium">Assumptions</p><ul className="ml-4 list-disc text-muted-foreground">{a.assumptions.map((x, i) => <li key={i}>{x}</li>)}</ul></div>
+              )}
+              {a.risks && a.risks.length > 0 && (
+                <div><p className="font-medium">Risks</p><ul className="ml-4 list-disc text-muted-foreground">{a.risks.map((x, i) => <li key={i}>{x}</li>)}</ul></div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+      <p className="text-2xs text-muted-foreground">The model rated its own prompt. This is not a measured accuracy.</p>
+    </section>
+  );
+}
+
 function PromptCard({ p }: { p: GeneratedPrompt }) {
   const [open, setOpen] = useState(false);
   return (
@@ -151,6 +234,7 @@ function PromptCard({ p }: { p: GeneratedPrompt }) {
             </div>
           </>
         )}
+        {p.status === "completed" && <SelfAssessmentPanel a={p.self_assessment} />}
         <p className="text-2xs text-muted-foreground">
           Generated {new Date(p.created_at).toLocaleString()}
           {p.used_own_interpretation ? ", using its own interpretation" : ""}
